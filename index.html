@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="index.css">
+    <title>Métricas V&V</title>
+</head>
+<body>
+    <div class="garden-container">
+        <div class="garden-header">
+            <h1>Métricas V&V</h1>
+            <p>Observa cómo crece la salud de tu proyecto de software</p>
+        </div>
+
+        <div class="controls-section">
+            <h3 style="margin-bottom: 15px; color: #2d5a2d;">Panel de Control </h3>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label for="projectSize">Tamaño del Proyecto (KLOC):</label>
+                    <input type="number" id="projectSize" min="1" max="1000" value="50">
+                </div>
+                <div class="control-group">
+                    <label for="teamSize">Tamaño del Equipo:</label>
+                    <input type="number" id="teamSize" min="1" max="50" value="8">
+                </div>
+                <div class="control-group">
+                    <label for="projectPhase">Fase del Proyecto:</label>
+                    <select id="projectPhase">
+                        <option value="planning">Planificación</option>
+                        <option value="development">Desarrollo</option>
+                        <option value="testing" selected>Pruebas</option>
+                        <option value="deployment">Despliegue</option>
+                        <option value="maintenance">Mantenimiento</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="criticalityLevel">Nivel de Criticidad:</label>
+                    <select id="criticalityLevel">
+                        <option value="low">Baja</option>
+                        <option value="medium" selected>Media</option>
+                        <option value="high">Alta</option>
+                        <option value="critical">Crítica</option>
+                    </select>
+                </div>
+            </div>
+            <button class="simulate-btn" onclick="simulateNewData()">Simular Nuevos Datos</button>
+        </div>
+
+        <div class="metrics-grid" id="metricsGrid">
+            <!-- Las métricas se generarán dinámicamente -->
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
