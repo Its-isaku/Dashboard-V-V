@@ -4,54 +4,181 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="index.css">
-    <title>Métricas V&V</title>
+    <title>Dashboard V&V - ISO/IEC 29110</title>
 </head>
 <body>
-    <div class="garden-container">
-        <div class="garden-header">
-            <h1>Métricas V&V</h1>
-            <p>Observa cómo crece la salud de tu proyecto de software</p>
+    <div class="dashboard-container">
+
+        <!--? Header de Dashboard -->
+        <div class="header glass">
+            <h1>Dashboard de Verificación y Validación</h1>
+            <p>Sistema de Métricas de Calidad de Software</p>
+            <span class="iso-badge">ISO/IEC 29110 COMPLIANT</span>
         </div>
 
+        <!--? Panel de Efectividad -->
+        <div class="effectiveness-panel">
+            <h2>Efectividad Total del Proceso V&V</h2>
+            <div class="effectiveness-gauge">
+                <svg class="gauge-svg" viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r="85" class="gauge-bg"></circle>
+                    <circle cx="100" cy="100" r="85" class="gauge-progress" id="gaugeProgress"
+                            stroke-dasharray="0 534"
+                            stroke="rgba(52, 152, 219, 0.8)"></circle>
+                </svg>
+                <div class="gauge-center">
+                    <div class="effectiveness-value" id="effectivenessValue">0%</div>
+                    <div class="effectiveness-label">Efectividad</div>
+                </div>
+            </div>
+            <div class="effectiveness-status" id="effectivenessStatus">Sin Calcular</div>
+        </div>
+
+        <!--? Filtros -->
         <div class="controls-section">
-            <h3 style="margin-bottom: 15px; color: #2d5a2d;">Panel de Control </h3>
+            <div class="controls-header">
+                <h3 class="controls-title">Panel de Control</h3>
+                <div class="input-mode-toggle">
+                    <button class="mode-btn active" onclick="toggleMode('simulation', event)">Simulación</button>
+                    <button class="mode-btn" onclick="toggleMode('manual', event)">Datos Reales</button>
+                </div>
+            </div>
+            
             <div class="controls-grid">
                 <div class="control-group">
-                    <label for="projectSize">Tamaño del Proyecto (KLOC):</label>
+                    <label for="projectSize">Tamaño del Proyecto (KLOC)</label>
                     <input type="number" id="projectSize" min="1" max="1000" value="50">
                 </div>
                 <div class="control-group">
-                    <label for="teamSize">Tamaño del Equipo:</label>
-                    <input type="number" id="teamSize" min="1" max="50" value="8">
+                    <label for="teamSize">Tamaño del Equipo (VSE 1-25)</label>
+                    <input type="number" id="teamSize" min="1" max="25" value="8">
                 </div>
                 <div class="control-group">
-                    <label for="projectPhase">Fase del Proyecto:</label>
+                    <label for="projectPhase">Fase del Proyecto (ISO 29110)</label>
                     <select id="projectPhase">
-                        <option value="planning">Planificación</option>
-                        <option value="development">Desarrollo</option>
-                        <option value="testing" selected>Pruebas</option>
-                        <option value="deployment">Despliegue</option>
-                        <option value="maintenance">Mantenimiento</option>
+                        <option value="si1">SI.1 - Iniciación</option>
+                        <option value="si2">SI.2 - Análisis de Requisitos</option>
+                        <option value="si3">SI.3 - Arquitectura y Diseño</option>
+                        <option value="si4">SI.4 - Construcción</option>
+                        <option value="si5" selected>SI.5 - Integración y Pruebas</option>
+                        <option value="si6">SI.6 - Entrega</option>
                     </select>
                 </div>
                 <div class="control-group">
-                    <label for="criticalityLevel">Nivel de Criticidad:</label>
-                    <select id="criticalityLevel">
-                        <option value="low">Baja</option>
-                        <option value="medium" selected>Media</option>
-                        <option value="high">Alta</option>
-                        <option value="critical">Crítica</option>
+                    <label for="integritySIL">Nivel de Integridad SIL</label>
+                    <select id="integritySIL">
+                        <option value="1">SIL 1 - Bajo</option>
+                        <option value="2" selected>SIL 2 - Moderado</option>
+                        <option value="3">SIL 3 - Alto</option>
+                        <option value="4">SIL 4 - Crítico</option>
                     </select>
                 </div>
             </div>
-            <button class="simulate-btn" onclick="simulateNewData()">Simular Nuevos Datos</button>
+            
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="calculateMetrics()">Calcular Métricas</button>
+                <button class="btn btn-secondary" onclick="openManualInput()">Ingresar Datos</button>
+            </div>
         </div>
 
+        <!--? Cumplimiento y Métricas -->
+        <div class="compliance-section">
+            <div class="compliance-header">
+                <h3 class="compliance-title">Cumplimiento ISO/IEC 29110</h3>
+            </div>
+            <div class="compliance-items">
+                <div class="compliance-item">
+                    <div class="compliance-label">Verificación de Requisitos</div>
+                    <div class="compliance-value" id="reqVerification">0%</div>
+                </div>
+                <div class="compliance-item">
+                    <div class="compliance-label">Trazabilidad</div>
+                    <div class="compliance-value" id="traceability">0%</div>
+                </div>
+                <div class="compliance-item">
+                    <div class="compliance-label">Revisiones de Código</div>
+                    <div class="compliance-value" id="codeReviews">0%</div>
+                </div>
+                <div class="compliance-item">
+                    <div class="compliance-label">Pruebas de Aceptación</div>
+                    <div class="compliance-value" id="acceptanceTests">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!--? Métricas Con Graficas -->
         <div class="metrics-grid" id="metricsGrid">
-            <!-- Las métricas se generarán dinámicamente -->
+            <!--*Las métricas se generarán dinámicamente -->
         </div>
     </div>
 
+    <!--? Modal para datos manuales -->
+    <div class="modal" id="manualInputModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Ingreso Manual de Métricas</h3>
+                <button class="modal-close" onclick="closeManualInput()">&times;</button>
+            </div>
+            <div class="manual-inputs">
+                <div class="manual-input-group">
+                    <label>Casos de Prueba Automatizados</label>
+                    <input type="number" id="automatedTests" placeholder="Ej: 150">
+                    <span class="input-help">Total de casos automatizados</span>
+                </div>
+                <div class="manual-input-group">
+                    <label>Total de Casos de Prueba</label>
+                    <input type="number" id="totalTests" placeholder="Ej: 200">
+                    <span class="input-help">Todos los casos de prueba</span>
+                </div>
+                <div class="manual-input-group">
+                    <label>Líneas de Código Cubiertas</label>
+                    <input type="number" id="coveredLines" placeholder="Ej: 8000">
+                    <span class="input-help">Líneas ejecutadas en pruebas</span>
+                </div>
+                <div class="manual-input-group">
+                    <label>Total de Líneas de Código</label>
+                    <input type="number" id="totalLines" placeholder="Ej: 10000">
+                    <span class="input-help">Total del código fuente</span>
+                </div>
+                <div class="manual-input-group">
+                    <label>Defectos Encontrados</label>
+                    <input type="number" id="defectsFound" placeholder="Ej: 45">
+                    <span class="input-help">Defectos detectados</span>
+                </div>
+                <div class="manual-input-group">
+                    <label>Regresiones Detectadas</label>
+                    <input type="number" id="regressions" placeholder="Ej: 5">
+                    <span class="input-help">Funcionalidades que fallaron</span>
+                </div>
+                <div class="manual-input-group">
+                    <label>Tiempo Promedio de Resolución (días)</label>
+                    <input type="number" step="0.1" id="resolutionTime" placeholder="Ej: 2.5">
+                    <span class="input-help">Días para resolver defectos</span>
+                </div>
+                <div class="manual-input-group">
+                    <label>Casos de Prueba Exitosos</label>
+                    <input type="number" id="successfulTests" placeholder="Ej: 180">
+                    <span class="input-help">Pruebas que pasaron</span>
+                </div>
+                <div class="manual-input-group">
+                    <label>Builds Exitosos</label>
+                    <input type="number" id="successfulBuilds" placeholder="Ej: 95">
+                    <span class="input-help">Compilaciones sin errores</span>
+                </div>
+                <div class="manual-input-group">
+                    <label>Total de Builds</label>
+                    <input type="number" id="totalBuilds" placeholder="Ej: 100">
+                    <span class="input-help">Todas las compilaciones</span>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="applyManualData()">Aplicar Datos</button>
+                <button class="btn btn-secondary" onclick="closeManualInput()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!--? Links de Javascript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="script.js"></script>
 </body>
