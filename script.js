@@ -25,6 +25,96 @@ const weights = {
     buildStability: 0.10
 };
 
+//? <|----- Sistema de Toast -----|>
+
+//* Función principal para mostrar toast
+function showToast(message, type = 'info', title = '', duration = 5000) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    //* Crear elemento toast
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    //* Configurar iconos según tipo
+    const icons = {
+        error: '✕',
+        success: '✓',
+        warning: '⚠',
+        info: 'ℹ'
+    };
+
+    //* Configurar títulos por defecto
+    const defaultTitles = {
+        error: 'Error',
+        success: 'Éxito',
+        warning: 'Advertencia',
+        info: 'Información'
+    };
+
+    const toastTitle = title || defaultTitles[type] || 'Notificación';
+    const toastIcon = icons[type] || 'ℹ';
+
+    //* Construir HTML del toast
+    toast.innerHTML = `
+        <div class="toast-header">
+            <div class="toast-icon">${toastIcon}</div>
+            <h4 class="toast-title">${toastTitle}</h4>
+        </div>
+        <p class="toast-message">${message}</p>
+        <button class="toast-close" onclick="closeToast(this.parentElement)">×</button>
+        <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
+    `;
+
+    //* Agregar al contenedor
+    container.appendChild(toast);
+
+    //* Mostrar toast con animación
+    setTimeout(() => toast.classList.add('show'), 10);
+
+    //* Auto-cerrar después del tiempo especificado
+    setTimeout(() => closeToast(toast), duration);
+
+    return toast;
+}
+
+//* Función para cerrar toast
+function closeToast(toast) {
+    if (!toast || !toast.classList.contains('toast')) return;
+    
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.parentElement.removeChild(toast);
+        }
+    }, 400);
+}
+
+//* Función para cerrar todos los toasts
+function closeAllToasts() {
+    const toasts = document.querySelectorAll('.toast');
+    toasts.forEach(toast => closeToast(toast));
+}
+
+//* Funciones de conveniencia para diferentes tipos de toast
+function showError(message, title = 'Error') {
+    return showToast(message, 'error', title, 6000);
+}
+
+function showSuccess(message, title = 'Éxito') {
+    return showToast(message, 'success', title, 4000);
+}
+
+function showWarning(message, title = 'Advertencia') {
+    return showToast(message, 'warning', title, 5000);
+}
+
+function showInfo(message, title = 'Información') {
+    return showToast(message, 'info', title, 4000);
+}
+
 //? <|----- Configuración de Métricas ISO 29110 -----|>
 
 //* Configuración completa de métricas ISO 29110 con umbrales y descripciones
@@ -184,10 +274,6 @@ function getEffectivenessStatus(effectiveness) {
 
 //? <|----- Actualización de Display de Efectividad -----|>
 
-//*
-//* Actualiza la visualización de la gráfica circular de efectividad
-//* Modifica el texto, porcentaje y animación del gauge SVG
-//*
 function updateEffectivenessDisplay() {
     const effectiveness = calculateEffectiveness();
     const status = getEffectivenessStatus(effectiveness);
@@ -206,19 +292,118 @@ function updateEffectivenessDisplay() {
     gauge.style.transition = 'stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1)';
 }
 
+//? <|----- Verificación de inputs -----|>
+
+// Función que obtiene min y max de los atributos HTML o valores por defecto
+function getInputLimits(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return { min: 0, max: 1000000 }; // Fallback por defecto
+    
+    // Obtener min y max del HTML, con fallbacks inteligentes
+    const min = parseInt(element.getAttribute('min')) || 0;
+    let max = parseInt(element.getAttribute('max'));
+    
+    // Si no hay max definido, usar valores basados en los placeholders
+    if (!max) {
+        const placeholder = element.getAttribute('placeholder') || '';
+        // Extraer número del placeholder (ej: "Ej: 150" -> 150)
+        const placeholderNumber = placeholder.match(/\d+/);
+        if (placeholderNumber) {
+            const suggestedValue = parseInt(placeholderNumber[0]);
+            // Usar un múltiplo del valor sugerido como máximo
+            max = suggestedValue * 10;
+        } else {
+            // Valores por defecto basados en el tipo de campo
+            max = elementId.includes('Lines') ? 1000000 : 
+                  elementId.includes('Tests') ? 10000 : 
+                  elementId.includes('Time') ? 365 : 1000;
+        }
+    }
+    
+    return { min, max };
+}
+
+function validateInput(value, min, max) {
+    //* Normalizar el valor (eliminar espacios en blanco)
+    const normalizedValue = typeof value === 'string' ? value.trim() : value;
+    
+    //* Verificar si está vacío o es null/undefined
+    if (normalizedValue === '' || normalizedValue == null) {
+        return {
+            isValid: false,
+            error: `El campo es requerido. Ingrese un valor entre ${min} y ${max}.`
+        };
+    }
+    
+    //* Convertir a número
+    const numericValue = Number(normalizedValue);
+    
+    //* Verificar si es un número válido
+    if (isNaN(numericValue) || !isFinite(numericValue)) {
+        return {
+            isValid: false,
+            error: `Debe ingresar un número válido entre ${min} y ${max}.`
+        };
+    }
+    
+    //* Verificar rango
+    if (numericValue < min || numericValue > max) {
+        return {
+            isValid: false,
+            error: `El valor debe estar entre ${min} y ${max}. Valor ingresado: ${numericValue}`
+        };
+    }
+    
+    return {
+        isValid: true,
+        value: numericValue,
+        error: null
+    };
+}
+
+// Función helper para validar usando límites del HTML
+function validateInputFromHTML(elementId) {
+    const element = document.getElementById(elementId);
+    const limits = getInputLimits(elementId);
+    return validateInput(element.value, limits.min, limits.max);
+}
+
+
 //? <|----- Simulación de Métricas -----|>
 
-//*
-//* Calcula métricas simuladas basadas en parámetros del proyecto
-//* Utiliza factores de ISO 29110 para generar datos realistas
-//*
 function calculateMetrics() {
-    //* Obtener parámetros del formulario
-    const projectSize = parseInt(document.getElementById('projectSize').value);
-    const teamSize = parseInt(document.getElementById('teamSize').value);
-    const phase = document.getElementById('projectPhase').value;
-    const sil = parseInt(document.getElementById('integritySIL').value);
+    //* Obtener y validar parámetros del formulario usando límites del HTML
     
+    //* Validar tamaño del proyecto
+    const projectSizeValidation = validateInputFromHTML('projectSize');
+    if (!projectSizeValidation.isValid) {
+        showError(projectSizeValidation.error, 'Error en Tamaño del Proyecto');
+        return;
+    }
+    const projectSize = projectSizeValidation.value;
+
+    //* Validar tamaño del equipo
+    const teamSizeValidation = validateInputFromHTML('teamSize');
+    if (!teamSizeValidation.isValid) {
+        showError(teamSizeValidation.error, 'Error en Tamaño del Equipo');
+        return;
+    }
+    const teamSize = teamSizeValidation.value;
+
+    //* Validar fase del proyecto
+    const phase = document.getElementById('projectPhase').value;
+    if (phase == '' || phase == null) {
+        showError('Por favor, seleccione una fase del proyecto válida.', 'Fase del Proyecto Requerida');
+        return;
+    }
+
+    //* Validar nivel de integridad SIL
+    const sil = parseInt(document.getElementById('integritySIL').value);
+    if (isNaN(sil) || sil < 1 || sil > 4) {
+        showError('Por favor, seleccione un nivel de integridad válido.', 'Nivel de Integridad Requerido');
+        return;
+    }
+
     //* Factores de ajuste basados en ISO 29110
     const sizeFactor = projectSize > 100 ? 0.9 : 1.1; //* Proyectos grandes tienen más complejidad
     const teamFactor = teamSize > 10 ? 0.95 : 1.05; //* Equipos grandes tienen más coordinación
@@ -256,6 +441,9 @@ function calculateMetrics() {
     renderMetrics();
     updateEffectivenessDisplay();
     saveMetrics();
+    
+    //* Mostrar mensaje de éxito
+    showSuccess('Métricas simuladas y dashboard actualizado correctamente.', 'Simulación Completada');
 }
 
 //? <|----- Actualización de Métricas de Cumplimiento -----|>
@@ -504,19 +692,160 @@ function closeManualInput() {
 
 //* Aplica datos ingresados manualmente al dashboard
 function applyManualData() {
-    //* Obtener valores del formulario con fallbacks
-    const automatedTests = parseInt(document.getElementById('automatedTests').value) || 0;
-    const totalTests = parseInt(document.getElementById('totalTests').value) || 1;
-    const coveredLines = parseInt(document.getElementById('coveredLines').value) || 0;
-    const totalLines = parseInt(document.getElementById('totalLines').value) || 1;
-    const defectsFound = parseInt(document.getElementById('defectsFound').value) || 0;
-    const regressions = parseInt(document.getElementById('regressions').value) || 0;
-    const resolutionTime = parseFloat(document.getElementById('resolutionTime').value) || 0;
-    const successfulTests = parseInt(document.getElementById('successfulTests').value) || 0;
-    const successfulBuilds = parseInt(document.getElementById('successfulBuilds').value) || 0;
-    const totalBuilds = parseInt(document.getElementById('totalBuilds').value) || 1;
+    //* Validar y obtener valores del formulario usando validateInput()
     
-    const projectSize = parseInt(document.getElementById('projectSize').value);
+    // Validar pruebas automatizadas
+    const automatedTestsValidation = validateInput(
+        document.getElementById('automatedTests').value, 
+        1, 
+        150
+    );
+    if (!automatedTestsValidation.isValid) {
+        showError(automatedTestsValidation.error, 'Error en Pruebas Automatizadas');
+        return;
+    }
+    const automatedTests = automatedTestsValidation.value;
+
+    // Validar total de pruebas
+    const totalTestsValidation = validateInput(
+        document.getElementById('totalTests').value, 
+        1, 
+        200
+    );
+    if (!totalTestsValidation.isValid) {
+        showError(totalTestsValidation.error, 'Error en Total de Pruebas');
+        return;
+    }
+    const totalTests = totalTestsValidation.value;
+
+    // Validar líneas cubiertas
+    const coveredLinesValidation = validateInput(
+        document.getElementById('coveredLines').value, 
+        1, 
+        10000
+    );
+    if (!coveredLinesValidation.isValid) {
+        showError(coveredLinesValidation.error, 'Error en Líneas Cubiertas');
+        return;
+    }
+    const coveredLines = coveredLinesValidation.value;
+
+    // Validar total de líneas
+    const totalLinesValidation = validateInput(
+        document.getElementById('totalLines').value, 
+        1, 
+        10000
+    );
+    if (!totalLinesValidation.isValid) {
+        showError(totalLinesValidation.error, 'Error en Total de Líneas');
+        return;
+    }
+    const totalLines = totalLinesValidation.value;
+
+    // Validar defectos encontrados
+    const defectsFoundValidation = validateInput(
+        document.getElementById('defectsFound').value, 
+        1, 
+        1000
+    );
+    if (!defectsFoundValidation.isValid) {
+        showError(defectsFoundValidation.error, 'Error en Defectos Encontrados');
+        return;
+    }
+    const defectsFound = defectsFoundValidation.value;
+
+    // Validar regresiones
+    const regressionsValidation = validateInput(
+        document.getElementById('regressions').value, 
+        1, 
+        100
+    );
+    if (!regressionsValidation.isValid) {
+        showError(regressionsValidation.error, 'Error en Regresiones');
+        return;
+    }
+    const regressions = regressionsValidation.value;
+
+    // Validar tiempo de resolución
+    const resolutionTimeValidation = validateInput(
+        document.getElementById('resolutionTime').value, 
+        1, 
+        31
+    );
+    if (!resolutionTimeValidation.isValid) {
+        showError(resolutionTimeValidation.error, 'Error en Tiempo de Resolución');
+        return;
+    }
+    const resolutionTime = resolutionTimeValidation.value;
+
+    // Validar pruebas exitosas
+    const successfulTestsValidation = validateInput(
+        document.getElementById('successfulTests').value, 
+        1, 
+        1000
+    );
+    if (!successfulTestsValidation.isValid) {
+        showError(successfulTestsValidation.error, 'Error en Pruebas Exitosas');
+        return;
+    }
+    const successfulTests = successfulTestsValidation.value;
+
+    // Validar builds exitosos
+    const successfulBuildsValidation = validateInput(
+        document.getElementById('successfulBuilds').value, 
+        1, 
+        1000
+    );
+    if (!successfulBuildsValidation.isValid) {
+        showError(successfulBuildsValidation.error, 'Error en Builds Exitosos');
+        return;
+    }
+    const successfulBuilds = successfulBuildsValidation.value;
+
+    // Validar total de builds
+    const totalBuildsValidation = validateInput(
+        document.getElementById('totalBuilds').value, 
+        1, 
+        1000
+    );
+    if (!totalBuildsValidation.isValid) {
+        showError(totalBuildsValidation.error, 'Error en Total de Builds');
+        return;
+    }
+    const totalBuilds = totalBuildsValidation.value;
+
+    // Validar tamaño del proyecto
+    const projectSizeValidation = validateInput(
+        document.getElementById('projectSize').value, 
+        1, 
+        100
+    );
+    if (!projectSizeValidation.isValid) {
+        showError(projectSizeValidation.error, 'Error en Tamaño del Proyecto');
+        return;
+    }
+    const projectSize = projectSizeValidation.value;
+
+    //* Validaciones lógicas adicionales
+    if (automatedTests > totalTests) {
+        showError('El número de pruebas automatizadas no puede ser mayor al total de pruebas.', 'Error de Validación');
+        return;
+    }
+
+    if (coveredLines > totalLines) {
+        showError('Las líneas cubiertas no pueden ser más que el total de líneas.', 'Error de Validación');
+        return;
+    }
+
+    if (successfulTests > totalTests) {
+        showError('Las pruebas exitosas no pueden ser más que el total de pruebas.', 'Error de Validación');
+        return;
+    }
+
+    if (successfulBuilds > totalBuilds) {
+        showError('Los builds exitosos no pueden ser más que el total de builds.', 'Error de Validación');
+        return;
+    }
     
     //* Calcular métricas principales basadas en datos manuales
     metricsData.automationRate = (automatedTests / totalTests) * 100;
@@ -538,6 +867,9 @@ function applyManualData() {
     updateEffectivenessDisplay();
     saveMetrics();
     
+    //* Mostrar mensaje de éxito
+    showSuccess('Métricas calculadas y dashboard actualizado correctamente.', 'Cálculo Completado');
+    
     closeManualInput();
 }
 
@@ -558,17 +890,126 @@ function loadMetrics() {
         renderMetrics();
         updateEffectivenessDisplay();
         updateComplianceMetrics();
+        
+        //* Mostrar mensaje informativo
+        const timestamp = localStorage.getItem('vvTimestamp');
+        const timeStr = timestamp ? new Date(timestamp).toLocaleString('es-ES') : 'desconocida';
+        showInfo(`Datos guardados cargados correctamente. Última actualización: ${timeStr}`, 'Datos Restaurados');
+        
+        return true;
     }
+    return false;
 }
 
 //? <|----- Inicialización y Event Listeners -----|>
 
+//* Función para prevenir caracteres no numéricos en inputs
+function setupInputValidation() {
+    //* Limpiar cualquier mensaje de error existente
+    const existingErrors = document.querySelectorAll('.input-error');
+    existingErrors.forEach(error => error.remove());
+    
+    //* Obtener todos los inputs de tipo number
+    const numberInputs = document.querySelectorAll('input[type="number"]');
+    
+    numberInputs.forEach(input => {
+        //* Prevenir la entrada de caracteres no deseados (e, E, +, -)
+        input.addEventListener('keypress', function(e) {
+            //* Permitir solo dígitos, punto decimal y teclas de control
+            const allowedKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.'];
+            const controlKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight'];
+            
+            //* Si es una tecla de control, permitirla
+            if (controlKeys.includes(e.key)) {
+                return true;
+            }
+            
+            //* Si no es un carácter permitido, prevenir la entrada
+            if (!allowedKeys.includes(e.key)) {
+                e.preventDefault();
+                return false;
+            }
+            
+            //* Validar que solo haya un punto decimal
+            if (e.key === '.' && input.value.includes('.')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        //* Prevenir pegar contenido no válido
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            let pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            
+            //* Limpiar el texto pegado - solo números y un punto decimal
+            pastedText = pastedText.replace(/[^0-9.]/g, '');
+            
+            //* Asegurar solo un punto decimal
+            const parts = pastedText.split('.');
+            if (parts.length > 2) {
+                pastedText = parts[0] + '.' + parts.slice(1).join('');
+            }
+            
+            //* Insertar el texto limpio
+            if (pastedText && !isNaN(pastedText)) {
+                input.value = pastedText;
+                //* Disparar evento de cambio para validaciones adicionales
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+        
+        //* Validar entrada en tiempo real
+        input.addEventListener('input', function(e) {
+            let value = e.target.value;
+            
+            //* Remover caracteres no válidos que puedan haber pasado
+            value = value.replace(/[^0-9.]/g, '');
+            
+            //* Asegurar solo un punto decimal
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            
+            //* Actualizar el valor si cambió
+            if (e.target.value !== value) {
+                e.target.value = value;
+            }
+        });
+        
+        //* Validar cuando se pierde el foco
+        input.addEventListener('blur', function(e) {
+            const elementId = e.target.id;
+            if (elementId) {
+                const validation = validateInputFromHTML(elementId);
+                
+                //* Solo aplicar estilos visuales, sin mostrar texto de error
+                if (!validation.isValid) {
+                    //* Aplicar estilo de error al campo
+                    e.target.classList.add('error');
+                } else {
+                    //* Remover estilo de error
+                    e.target.classList.remove('error');
+                }
+                
+                //* Remover cualquier mensaje de error previo si existe
+                const errorElement = document.getElementById(elementId + '_error');
+                if (errorElement) {
+                    errorElement.remove();
+                }
+            }
+        });
+    });
+}
+
 //* Inicialización cuando el DOM está listo
 document.addEventListener('DOMContentLoaded', function() {
-    loadMetrics();
+    //* Configurar validación de inputs
+    setupInputValidation();
     
-    //* Si no hay datos guardados, generar métricas iniciales
-    if (!localStorage.getItem('vvMetrics')) {
+    //* Intentar cargar datos guardados, si no hay, generar métricas iniciales
+    if (!loadMetrics()) {
         calculateMetrics();
     }
 });
